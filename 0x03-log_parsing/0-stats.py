@@ -1,50 +1,52 @@
 #!/usr/bin/python3
 """
-Log parsing script
-Reads from standard input and computes metrics:
-- Total file size from all lines
-- Count of each status code
+Log parsing
 """
+
 import sys
 
-# Initialize variables
-total_size = 0
-status_codes = {"200": 0, "301": 0, "400": 0, "401": 0, "403": 0, "404": 0, "405": 0, "500": 0}
-line_count = 0
+if __name__ == '__main__':
+    # Initialize the total file size and line counter
+    total_filesize, line_count = 0, 0
+    # List of valid status codes
+    valid_codes = ["200", "301", "400", "401", "403", "404", "405", "500"]
+    # Dictionary to track the count of each status code
+    status_counts = {code: 0 for code in valid_codes}
 
-def print_stats():
-    """Prints the accumulated metrics"""
-    print(f"File size: {total_size}")
-    for code in sorted(status_codes.keys()):
-        if status_codes[code] > 0:
-            print(f"{code}: {status_codes[code]}")
+    def print_stats(stats: dict, total_size: int) -> None:
+        """Prints the accumulated statistics."""
+        print("File size: {:d}".format(total_size))
+        for key, value in sorted(stats.items()):
+            if value > 0:
+                print("{}: {}".format(key, value))
 
-try:
-    for line in sys.stdin:
-        line_count += 1
-        parts = line.split()
+    try:
+        for line in sys.stdin:
+            line_count += 1
+            data = line.split()
 
-        try:
-            # Extract the file size and status code
-            file_size = int(parts[-1])
-            status_code = parts[-2]
+            # Update the file size if the value exists
+            try:
+                total_filesize += int(data[-1])
+            except (IndexError, ValueError):
+                pass
 
-            # Update total size and status code count
-            total_size += file_size
-            if status_code in status_codes:
-                status_codes[status_code] += 1
-        except (IndexError, ValueError):
-            # If line format is invalid, skip it
-            continue
+            # Update the status code count if it's valid
+            try:
+                status_code = data[-2]
+                if status_code in status_counts:
+                    status_counts[status_code] += 1
+            except IndexError:
+                pass
 
-        # Print stats every 10 lines
-        if line_count % 10 == 0:
-            print_stats()
+            # Print stats every 10 lines
+            if line_count % 10 == 0:
+                print_stats(status_counts, total_filesize)
 
-except KeyboardInterrupt:
-    # Handle CTRL + C (keyboard interrupt)
-    print_stats()
-    raise
+        # Final stats after reading all lines
+        print_stats(status_counts, total_filesize)
 
-# Final print after processing all lines
-print_stats()
+    except KeyboardInterrupt:
+        # Print stats on keyboard interrupt
+        print_stats(status_counts, total_filesize)
+        raise
