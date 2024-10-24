@@ -1,39 +1,50 @@
 #!/usr/bin/python3
 """
-Log parsing
+Log parsing script
+Reads from standard input and computes metrics:
+- Total file size from all lines
+- Count of each status code
 """
-
 import sys
 
-if __name__ == '__main__':
+# Initialize variables
+total_size = 0
+status_codes = {"200": 0, "301": 0, "400": 0, "401": 0, "403": 0, "404": 0, "405": 0, "500": 0}
+line_count = 0
 
-    filesize, count = 0, 0
-    codes = ["200", "301", "400", "401", "403", "404", "405", "500"]
-    stats = {k: 0 for k in codes}
+def print_stats():
+    """Prints the accumulated metrics"""
+    print(f"File size: {total_size}")
+    for code in sorted(status_codes.keys()):
+        if status_codes[code] > 0:
+            print(f"{code}: {status_codes[code]}")
 
-    def print_stats(stats: dict, file_size: int) -> None:
-        print("File size: {:d}".format(filesize))
-        for k, v in sorted(stats.items()):
-            if v:
-                print("{}: {}".format(k, v))
+try:
+    for line in sys.stdin:
+        line_count += 1
+        parts = line.split()
 
-    try:
-        for line in sys.stdin:
-            count += 1
-            data = line.split()
-            try:
-                status_code = data[-2]
-                if status_code in stats:
-                    stats[status_code] += 1
-            except BaseException:
-                pass
-            try:
-                filesize += int(data[-1])
-            except BaseException:
-                pass
-            if count % 10 == 0:
-                print_stats(stats, filesize)
-        print_stats(stats, filesize)
-    except KeyboardInterrupt:
-        print_stats(stats, filesize)
-        raise
+        try:
+            # Extract the file size and status code
+            file_size = int(parts[-1])
+            status_code = parts[-2]
+
+            # Update total size and status code count
+            total_size += file_size
+            if status_code in status_codes:
+                status_codes[status_code] += 1
+        except (IndexError, ValueError):
+            # If line format is invalid, skip it
+            continue
+
+        # Print stats every 10 lines
+        if line_count % 10 == 0:
+            print_stats()
+
+except KeyboardInterrupt:
+    # Handle CTRL + C (keyboard interrupt)
+    print_stats()
+    raise
+
+# Final print after processing all lines
+print_stats()
